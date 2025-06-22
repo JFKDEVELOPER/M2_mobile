@@ -1,38 +1,21 @@
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import {
-  createUserWithEmailAndPassword,
-  signOut,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  initializeAuth,
-  getReactNativePersistence
-} from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getFirestore } from 'firebase/firestore';
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Configuração do Firebase
-const app = initializeApp({
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: `${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: `${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
-});
-
-// Inicializando a autenticação com persistência no AsyncStorage
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
-
-// Inicializando o Firestore
-const db = getFirestore(app);
-
-export {
-  auth,
-  createUserWithEmailAndPassword,
-  signOut,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  db
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyA9e8mKH5unl_qOKRk9VkdVYuDlcIrdA1E",
+  authDomain: "bestfit-f6798.firebaseapp.com",
+  projectId: "bestfit-f6798",
+  storageBucket: "bestfit-f6798.firebasestorage.app",
+  messagingSenderId: "429539018463",
+  appId: "1:429539018463:web:b9dd4f447f6f74d7914b6a",
+  measurementId: "G-MS22BXVH70"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
