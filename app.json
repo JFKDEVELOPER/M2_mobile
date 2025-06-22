@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "controle_gastos",
-    "slug": "controle_gastos",
+    "name": "BestFit",
+    "slug": "BestFit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
