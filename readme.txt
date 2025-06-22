@@ -1,1 +1,1 @@
-Dupla: Jonathan Felipe Kuss e Kauan SIlva
+Dupla: Jonathan Felipe Kuss e Kauan Silva
