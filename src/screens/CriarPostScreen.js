@@ -11,7 +11,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth } from '../../firebase';
+import { auth, db } from '../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function CriarPostScreen({ navigation }) {
   const [image, setImage] = useState(null);
@@ -68,11 +69,26 @@ export default function CriarPostScreen({ navigation }) {
       return;
     }
 
+    let photoURL = currentUser.photoURL || 'https://i.pravatar.cc/150?img=3';
+
+    // 🔄 Buscar a imagem atualizada no Firestore, se existir
+    try {
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) {
+          photoURL = userData.photoURL;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar foto no Firestore:', error);
+    }
+
     const newPost = {
       id: Date.now().toString(),
       user: currentUser.displayName || 'Usuário',
-      userEmail: currentUser.email,         // <-- adiciona aqui o email do usuário
-      userPhoto: currentUser.photoURL || 'https://i.pravatar.cc/150?img=3',
+      userEmail: currentUser.email,
+      userPhoto: photoURL,
       image,
       description,
       location,
@@ -94,7 +110,9 @@ export default function CriarPostScreen({ navigation }) {
       <Text style={styles.title}>Criar novo post</Text>
 
       <TouchableOpacity onPress={takePhoto} style={styles.cameraButton}>
-        <Text style={styles.cameraText}>{image ? '📷 Foto tirada' : 'Abrir câmera'}</Text>
+        <Text style={styles.cameraText}>
+          {image ? '📷 Foto tirada' : 'Abrir câmera'}
+        </Text>
       </TouchableOpacity>
 
       {image && <Image source={{ uri: image }} style={styles.imagePreview} />}
@@ -119,7 +137,13 @@ export default function CriarPostScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#2E0854' },
-  title: { fontSize: 24, color: '#fff', fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+  title: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   input: {
     backgroundColor: '#5B2DB6',
     color: '#fff',

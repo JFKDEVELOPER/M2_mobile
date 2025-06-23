@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { auth, db } from '../../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 export default function RegisterScreen({ navigation }) {
@@ -29,27 +29,32 @@ export default function RegisterScreen({ navigation }) {
       Alert.alert('Erro', 'Preencha todos os campos!');
       return;
     }
-
+  
     if (!isValidEmail(email)) {
       Alert.alert('Erro', 'Email inválido!');
       return;
     }
-
+  
     if (password.length < 6) {
       Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
       return;
     }
-
+  
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
+  
+      // Atualiza o displayName no auth
+      await updateProfile(userCredential.user, {
+        displayName: name,
+      });
+  
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
         email,
         phone,
         photoURL: '',
       });
-
+  
       Alert.alert('Sucesso', 'Usuário registrado!');
       navigation.replace('Login');
     } catch (error) {

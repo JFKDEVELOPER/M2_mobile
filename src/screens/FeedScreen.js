@@ -1,12 +1,22 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth } from '../../firebase';
+import { auth, db } from '../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function FeedScreen({ navigation }) {
   const [posts, setPosts] = useState([]);
+  const [userPhoto, setUserPhoto] = useState('https://i.pravatar.cc/150?img=3');
 
-  // Carregar posts do AsyncStorage toda vez que a tela for focada
+  // Carregar posts
   useEffect(() => {
     const loadPosts = async () => {
       const storedPosts = await AsyncStorage.getItem('posts');
@@ -21,25 +31,42 @@ export default function FeedScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
-  // Botão perfil no header
+  // Carregar foto de perfil do Firestore
+  useEffect(() => {
+    const fetchUserPhoto = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.photoURL) {
+            setUserPhoto(data.photoURL);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar foto de perfil:', error);
+      }
+    };
+
+    fetchUserPhoto();
+  }, []);
+
+  // Botão de perfil no header
   useLayoutEffect(() => {
-    const user = auth.currentUser;
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
           onPress={() => navigation.navigate('Perfil')}
           style={{ marginRight: 15 }}
         >
-          <Image
-            source={{
-              uri: user?.photoURL || 'https://i.pravatar.cc/150?img=3',
-            }}
-            style={styles.profilePhoto}
-          />
+          <Image source={{ uri: userPhoto }} style={styles.profilePhoto} />
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, userPhoto]);
 
   async function toggleLike(postId) {
     const updatedPosts = posts.map((post) =>
@@ -79,6 +106,24 @@ export default function FeedScreen({ navigation }) {
     );
   }
 
+  async function limparPosts() {
+    Alert.alert(
+      'Remover todos os posts',
+      'Tem certeza que deseja apagar todos os posts?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Apagar',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('posts');
+            setPosts([]);
+          },
+        },
+      ]
+    );
+  }
+
   return (
     <View style={styles.container}>
       {posts.length === 0 ? (
@@ -103,6 +148,7 @@ export default function FeedScreen({ navigation }) {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+
     </View>
   );
 }
@@ -175,7 +221,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 24,
-    bottom: 30,
+    bottom: 80,
     backgroundColor: '#9F7AEA',
     width: 60,
     height: 60,
@@ -194,6 +240,27 @@ const styles = StyleSheet.create({
     lineHeight: 38,
     fontWeight: '700',
   },
+  profilePhoto: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#DDA0FF',
+  },
+  clearButton: {
+    position: 'absolute',
+    bottom: 10,
+    left: 24,
+    right: 24,
+    backgroundColor: '#D9534F',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -205,28 +272,4 @@ const styles = StyleSheet.create({
     color: '#DDA0FF',
     textAlign: 'center',
   },
-  profilePhoto: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#DDA0FF',
-  },
 });
-
-<TouchableOpacity
-  onPress={async () => {
-    await AsyncStorage.removeItem('posts');
-    setPosts([]); // Atualiza estado para refletir a mudança
-  }}
-  style={{
-    backgroundColor: 'red',
-    padding: 10,
-    margin: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  }}
->
-  <Text style={{ color: 'white', fontWeight: 'bold' }}>Remover todos os posts</Text>
-</TouchableOpacity>
-
