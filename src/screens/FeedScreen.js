@@ -15,8 +15,25 @@ import { doc, getDoc } from 'firebase/firestore';
 export default function FeedScreen({ navigation }) {
   const [posts, setPosts] = useState([]);
   const [userPhoto, setUserPhoto] = useState('https://i.pravatar.cc/150?img=3');
+  const [userName, setUserName] = useState('');
 
-  // Carregar posts
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const fetchUserData = async () => {
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        if (data.photoURL) setUserPhoto(data.photoURL);
+        if (data.name) setUserName(data.name);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   useEffect(() => {
     const loadPosts = async () => {
       const storedPosts = await AsyncStorage.getItem('posts');
@@ -31,30 +48,6 @@ export default function FeedScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
-  // Carregar foto de perfil do Firestore
-  useEffect(() => {
-    const fetchUserPhoto = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          if (data.photoURL) {
-            setUserPhoto(data.photoURL);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao buscar foto de perfil:', error);
-      }
-    };
-
-    fetchUserPhoto();
-  }, []);
-
-  // Botão de perfil no header
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -68,21 +61,38 @@ export default function FeedScreen({ navigation }) {
     });
   }, [navigation, userPhoto]);
 
-  async function toggleLike(postId) {
-    const updatedPosts = posts.map((post) =>
-      post.id === postId
-        ? {
-            ...post,
-            liked: !post.liked,
-            likesCount: post.liked ? post.likesCount - 1 : post.likesCount + 1,
-          }
-        : post
-    );
+  const toggleLike = async (postId) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const updatedPosts = posts.map((post) => {
+      if (post.id === postId) {
+        const alreadyLiked = post.likes?.includes(user.email);
+        const updatedLikes = alreadyLiked
+          ? post.likes.filter((email) => email !== user.email)
+          : [...(post.likes || []), user.email];
+
+        const updatedNames = alreadyLiked
+          ? post.likedBy.filter((name) => name !== userName)
+          : [...(post.likedBy || []), userName];
+
+        return {
+          ...post,
+          likes: updatedLikes,
+          likedBy: updatedNames,
+        };
+      }
+      return post;
+    });
+
     setPosts(updatedPosts);
     await AsyncStorage.setItem('posts', JSON.stringify(updatedPosts));
-  }
+  };
 
-  function renderPost({ item }) {
+  const renderPost = ({ item }) => {
+    const isLiked = item.likes?.includes(auth.currentUser.email);
+    const curtidoPor = item.likedBy?.join(', ') || '';
+
     return (
       <View style={styles.postContainer}>
         <View style={styles.header}>
@@ -95,34 +105,22 @@ export default function FeedScreen({ navigation }) {
         <Image source={{ uri: item.image }} style={styles.postImage} />
 
         <Text style={styles.description}>{item.description}</Text>
-        {item.location ? <Text style={styles.location}>📍 {item.location}</Text> : null}
+        {item.location ? (
+          <Text style={styles.location}>📍 {item.location}</Text>
+        ) : null}
 
         <TouchableOpacity onPress={() => toggleLike(item.id)} style={styles.likeButton}>
-          <Text style={{ color: item.liked ? '#DDA0FF' : '#bbb', fontSize: 16 }}>
-            {item.liked ? '💜' : '🤍'} Curtir ({item.likesCount})
+          <Text style={{ color: isLiked ? '#DDA0FF' : '#bbb', fontSize: 16 }}>
+            {isLiked ? '💜' : '🤍'} Curtir ({item.likes?.length || 0})
           </Text>
         </TouchableOpacity>
+
+        {item.likedBy?.length > 0 && (
+          <Text style={styles.curtidoPor}>Curtido por: {curtidoPor}</Text>
+        )}
       </View>
     );
-  }
-
-  async function limparPosts() {
-    Alert.alert(
-      'Remover todos os posts',
-      'Tem certeza que deseja apagar todos os posts?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Apagar',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('posts');
-            setPosts([]);
-          },
-        },
-      ]
-    );
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -140,7 +138,6 @@ export default function FeedScreen({ navigation }) {
         />
       )}
 
-      {/* Botão criar post */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('CriarPost')}
@@ -148,16 +145,12 @@ export default function FeedScreen({ navigation }) {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#2E0854',
-  },
+  container: { flex: 1, backgroundColor: '#2E0854' },
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -218,6 +211,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: '#6A0DAD',
   },
+  curtidoPor: {
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    fontSize: 14,
+    color: '#E6E6FA',
+  },
   fab: {
     position: 'absolute',
     right: 24,
@@ -246,20 +245,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#DDA0FF',
-  },
-  clearButton: {
-    position: 'absolute',
-    bottom: 10,
-    left: 24,
-    right: 24,
-    backgroundColor: '#D9534F',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  clearButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
   emptyContainer: {
     flex: 1,
