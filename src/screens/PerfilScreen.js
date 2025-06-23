@@ -1,59 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../../firebase';
 
 export default function PerfilScreen() {
   const [userPosts, setUserPosts] = useState([]);
-
   const user = auth.currentUser;
 
-  useEffect(() => {
-    const loadUserPosts = async () => {
-      try {
-        const storedPosts = await AsyncStorage.getItem('posts');
-        if (storedPosts) {
-          const allPosts = JSON.parse(storedPosts);
-          // Filtra posts do usuário logado (aqui comparando email, ajuste se usar uid ou outro campo)
-          const filteredPosts = allPosts.filter(post => post.userEmail === user.email);
-          setUserPosts(filteredPosts);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar posts:', error);
+  // Função para carregar posts do usuário
+  const loadUserPosts = async () => {
+    try {
+      const storedPosts = await AsyncStorage.getItem('posts');
+      if (storedPosts) {
+        const allPosts = JSON.parse(storedPosts);
+        const filteredPosts = allPosts.filter(post => post.userEmail === user.email);
+        setUserPosts(filteredPosts);
+      } else {
+        setUserPosts([]);
       }
-    };
+    } catch (error) {
+      console.error('Erro ao carregar posts:', error);
+    }
+  };
 
+  useEffect(() => {
     loadUserPosts();
   }, []);
 
   async function excluirPost(postId) {
-    Alert.alert(
-      'Confirmar exclusão',
-      'Tem certeza que deseja excluir este post?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const storedPosts = await AsyncStorage.getItem('posts');
-              if (storedPosts) {
-                const allPosts = JSON.parse(storedPosts);
-                // Remove o post da lista geral
-                const postsAtualizados = allPosts.filter(post => post.id !== postId);
-                await AsyncStorage.setItem('posts', JSON.stringify(postsAtualizados));
-                // Atualiza só os posts do usuário na tela
-                setUserPosts(postsAtualizados.filter(post => post.userEmail === user.email));
-              }
-            } catch (error) {
-              console.error('Erro ao excluir post:', error);
-            }
+    const excluir = async () => {
+      try {
+        const storedPosts = await AsyncStorage.getItem('posts');
+        if (storedPosts) {
+          const allPosts = JSON.parse(storedPosts);
+          const postsAtualizados = allPosts.filter(post => post.id !== postId);
+          await AsyncStorage.setItem('posts', JSON.stringify(postsAtualizados));
+          setUserPosts(postsAtualizados.filter(post => post.userEmail === user.email));
+        }
+      } catch (error) {
+        console.error('Erro ao excluir post:', error);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmado = window.confirm('Tem certeza que deseja excluir este post?');
+      if (confirmado) {
+        await excluir();
+        // Força recarregar posts para garantir UI atualizada no web
+        await loadUserPosts();
+      }
+    } else {
+      Alert.alert(
+        'Confirmar exclusão',
+        'Tem certeza que deseja excluir este post?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Excluir',
+            style: 'destructive',
+            onPress: async () => {
+              await excluir();
+            },
           },
-        },
-      ],
-      { cancelable: true }
-    );
+        ],
+        { cancelable: true }
+      );
+    }
   }
 
   function renderPost({ item }) {
@@ -61,10 +73,7 @@ export default function PerfilScreen() {
       <View style={styles.postContainer}>
         <Image source={{ uri: item.image }} style={styles.postImage} />
         <Text style={styles.description}>{item.description}</Text>
-        <TouchableOpacity
-          onPress={() => excluirPost(item.id)}
-          style={styles.deleteButton}
-        >
+        <TouchableOpacity onPress={() => excluirPost(item.id)} style={styles.deleteButton}>
           <Text style={styles.deleteButtonText}>Excluir Post</Text>
         </TouchableOpacity>
       </View>
