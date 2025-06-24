@@ -5,7 +5,7 @@ Aplicativo desenvolvido com React Native e Firebase.
 ## Integrantes
 
 - Jonathan Felipe Kuss  
-- [Nome do segundo integrante, se houver]
+- Kauan Silva
 
 ## Requisitos
 

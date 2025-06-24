@@ -21,6 +21,8 @@
     "dayjs": "^1.11.13",
     "expo": "~52.0.42",
     "expo-constants": "~17.0.8",
+    "expo-image-picker": "~16.0.6",
+    "expo-location": "~18.0.10",
     "expo-status-bar": "~2.0.1",
     "firebase": "^11.6.0",
     "moment": "^2.30.1",
@@ -31,9 +33,7 @@
     "react-native-reanimated": "^3.18.0",
     "react-native-safe-area-context": "^5.5.0",
     "react-native-screens": "^4.11.1",
-    "react-native-web": "~0.19.13",
-    "expo-image-picker": "~16.0.6",
-    "expo-location": "~18.0.10"
+    "react-native-web": "~0.19.13"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
